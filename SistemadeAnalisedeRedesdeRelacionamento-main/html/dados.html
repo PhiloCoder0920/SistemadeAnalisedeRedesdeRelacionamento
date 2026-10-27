@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Estruturação e Leitura de Dados</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+
+  <div class="sidebar">
+    <div>
+      <div class="brand">
+        <h2>Rede Social</h2>
+        <p>Teoria dos Grafos</p>
+      </div>
+      <ul class="nav-menu">
+        <li class="nav-item"><a href="../index.html"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-6v-7h-4v7H4a1 1 0 0 1-1-1z"/></svg> Início</a></li>
+        <li class="nav-item"><a href="consultas.html"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg> Consultas</a></li>
+        <li class="nav-item"><a href="analise.html"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10m6 10V4m6 16v-7m4 7H2"/></svg> Análise</a></li>
+        <li class="nav-item"><a href="falhas.html"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.3 3.9 2.5 17.4A1.8 1.8 0 0 0 4 20h16a1.8 1.8 0 0 0 1.5-2.6L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4m0 3h.01"/></svg> Falhas</a></li>
+        <li class="nav-item"><a href="perfil.html"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M5 21v-2a7 7 0 0 1 14 0v2"/></svg> Perfil</a></li>
+        <li class="nav-item active"><a href="dados.html"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.7 4 3 9 3s9-1.3 9-3V5M3 12c0 1.7 4 3 9 3s9-1.3 9-3"/></svg> Dados</a></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="main-content">
+    <div class="header">
+      <h1>Estruturação e Leitura de Dados</h1>
+      <p>Importação de arquivos e validação da integridade do grafo</p>
+    </div>
+    <div class="content-body">
+      <div class="grid-equal">
+        <div class="card">
+          <h3>Importação de Arquivos</h3>
+          <p class="muted" style="margin-bottom:15px;">Formatos suportados: JSON ou CSV</p>
+
+          <div class="dropzone" id="dropzone">
+            <p id="textoDropzone">Clique ou arraste um arquivo JSON/CSV para enviar</p>
+            <input type="file" id="fileInput" style="display:none;" accept=".json,.csv">
+          </div>
+
+          <div class="row" style="margin-top:15px;">
+            <button id="btnImportar" disabled>Importar Dados</button>
+            <button id="btnPadrao" class="btn-secondary">Restaurar Rede Padrão</button>
+            <button id="btnExportar" class="btn-secondary">Baixar JSON Atual</button>
+          </div>
+
+          <p class="muted" style="margin-top:15px;">Formato JSON esperado:</p>
+<pre class="exemplo">{
+  "profiles": [{"name": "Ana"}, {"name": "Bruno"}],
+  "connections": [
+    {"from": "Ana", "to": "Bruno", "afinidade": 0.9, "interacoes": 150}
+  ]
+}</pre>
+          <p class="muted" style="margin-top:10px;">Formato CSV (conexões; os perfis são deduzidos):</p>
+<pre class="exemplo">from,to,afinidade,interacoes
+Ana,Bruno,0.9,150
+Bruno,Carla,0.7,80</pre>
+          <p class="muted" style="margin-top:10px;">Perfis podem ter <code>x</code> e <code>y</code> opcionais; sem eles, o grafo é distribuído em círculo. O campo <code>weight</code> também é aceito como afinidade.</p>
+        </div>
+
+        <div class="card">
+          <h3>Checklist de Validação do Grafo</h3>
+          <p class="muted">Status da leitura, estruturação e validação</p>
+          <ul class="status-list" id="checklist">
+            <li id="chk-leitura">Leitura do arquivo</li>
+            <li id="chk-perfis">Estruturação de perfis (nós)</li>
+            <li id="chk-conexoes">Estruturação de conexões (arestas)</li>
+            <li id="chk-orfaos">Validação: sem nós órfãos</li>
+            <li id="chk-duplicados">Validação: sem nomes duplicados</li>
+            <li id="chk-carga">Carga do grafo na aplicação</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Dados Atuais da Rede</h3>
+        <div class="grid-equal" style="margin-top:12px;">
+          <div>
+            <p class="muted" id="tituloPerfis"></p>
+            <div class="chips" id="chipsPerfis"></div>
+          </div>
+          <div>
+            <p class="muted" id="tituloConexoes"></p>
+            <div class="list scroll-y" id="listaConexoes" style="margin-top:12px;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../js/grafo.js"></script>
+  <script src="../js/importacao.js"></script>
+  <script>
+    const fileInput = document.getElementById('fileInput');
+    const dropzone = document.getElementById('dropzone');
+    const btnImportar = document.getElementById('btnImportar');
+    let arquivoSelecionado = null;
+
+    function definirStatus(id, estado, detalhe = '') {
+      const item = document.getElementById(`chk-${id}`);
+      item.className = estado;
+      const rotulo = item.dataset.rotulo || (item.dataset.rotulo = item.textContent.trim());
+      const marca = estado === 'ok' ? '✓' : (estado === 'erro' ? '✗' : '○');
+      item.innerHTML = `<span>${marca}</span> ${rotulo}${detalhe ? `<small>${escapar(detalhe)}</small>` : ''}`;
+    }
+
+    function limparChecklist() {
+      ['leitura', 'perfis', 'conexoes', 'orfaos', 'duplicados', 'carga'].forEach(id => definirStatus(id, ''));
+    }
+
+    function mostrarDadosAtuais() {
+      document.getElementById('tituloPerfis').textContent = `Perfis (${grafo.nos.length})`;
+      document.getElementById('chipsPerfis').innerHTML = grafo.nos.map(n => `<span class="chip">${escapar(n.id)}</span>`).join('');
+      document.getElementById('tituloConexoes').textContent = `Conexões (${grafo.arestas.length})`;
+      document.getElementById('listaConexoes').innerHTML = grafo.arestas.map(e => `
+        <div class="list-row">
+          <span>${escapar(e.origem)} &rarr; ${escapar(e.destino)}${e.ativa ? '' : ' <span class="msg-erro">(desativada)</span>'}</span>
+          <span class="badge">afinidade ${formatarNumero(e.afinidade)} · ${formatarNumero(e.interacoes)} interações</span>
+        </div>`).join('');
+    }
+
+    function selecionarArquivo(arquivo) {
+      arquivoSelecionado = arquivo;
+      btnImportar.disabled = !arquivo;
+      document.getElementById('textoDropzone').textContent = arquivo ? `Arquivo selecionado: ${arquivo.name}` : 'Clique ou arraste um arquivo JSON/CSV para enviar';
+      limparChecklist();
+    }
+
+    async function importar() {
+      if (!arquivoSelecionado) return;
+      limparChecklist();
+
+      let dados;
+      try {
+        dados = interpretarArquivoRede(await arquivoSelecionado.text(), arquivoSelecionado.name);
+        definirStatus('leitura', 'ok', arquivoSelecionado.name);
+      } catch (erro) {
+        definirStatus('leitura', 'erro', erro.message);
+        return;
+      }
+
+      const verificacoes = validarRede(dados);
+      Object.entries(verificacoes).forEach(([id, v]) => definirStatus(id, v.ok ? 'ok' : 'erro', v.mensagem));
+
+      if (!Object.values(verificacoes).every(v => v.ok)) {
+        definirStatus('carga', 'erro', 'Importação cancelada: corrija os erros acima');
+        return;
+      }
+
+      try {
+        substituirGrafo(construirGrafo(dados));
+        definirStatus('carga', 'ok', `${grafo.nos.length} perfis, ${grafo.arestas.length} conexões`);
+        mostrarDadosAtuais();
+      } catch (erro) {
+        definirStatus('carga', 'erro', erro.message);
+      }
+    }
+
+    dropzone.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', () => selecionarArquivo(fileInput.files[0] || null));
+    ['dragover', 'dragenter'].forEach(nome => dropzone.addEventListener(nome, e => { e.preventDefault(); dropzone.classList.add('ativo'); }));
+    ['dragleave', 'drop'].forEach(nome => dropzone.addEventListener(nome, e => { e.preventDefault(); dropzone.classList.remove('ativo'); }));
+    dropzone.addEventListener('drop', e => selecionarArquivo(e.dataTransfer.files[0] || null));
+
+    btnImportar.addEventListener('click', importar);
+
+    document.getElementById('btnPadrao').addEventListener('click', () => {
+      if (!confirm('Substituir a rede atual pela rede padrão? As conexões desativadas serão perdidas.')) return;
+      substituirGrafo(criarGrafoPadrao());
+      limparChecklist();
+      mostrarDadosAtuais();
+    });
+
+    document.getElementById('btnExportar').addEventListener('click', () => {
+      const dados = {
+        profiles: grafo.nos.map(n => ({ name: n.id, x: Math.round(n.x), y: Math.round(n.y) })),
+        connections: grafo.arestas.map(e => ({ from: e.origem, to: e.destino, afinidade: e.afinidade, interacoes: e.interacoes }))
+      };
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(new Blob([JSON.stringify(dados, null, 2)], { type: 'application/json' }));
+      link.download = 'rede.json';
+      link.click();
+      URL.revokeObjectURL(link.href);
+    });
+
+    limparChecklist();
+    mostrarDadosAtuais();
+  </script>
+</body>
+</html>
