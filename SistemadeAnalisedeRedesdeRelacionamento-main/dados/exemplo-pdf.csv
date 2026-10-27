@@ -1,5 +1,0 @@
-from,to,afinidade,interacoes
-Ana,Bruno,0.9,150
-Bruno,Carla,0.7,80
-Carla,Ana,0.8,110
-Ana,Carla,0.3,20
