@@ -33,43 +33,41 @@
       <div class="grid-equal">
         <div class="card">
           <h3>Importação de Arquivos</h3>
-          <p class="muted" style="margin-bottom:15px;">Formatos suportados: JSON ou CSV</p>
+          <p class="muted" style="margin-bottom:15px;">Formatos suportados: CSV ou JSON</p>
 
-          <div class="dropzone" id="dropzone">
-            <p id="textoDropzone">Clique ou arraste um arquivo JSON/CSV para enviar</p>
-            <input type="file" id="fileInput" style="display:none;" accept=".json,.csv">
-          </div>
+          <form method="post" action="/html/dados.html" enctype="multipart/form-data">
+            <input type="hidden" name="acao" value="importar">
+            <div class="form-group">
+              <label for="fileInput">Selecione um arquivo CSV ou JSON</label>
+              <input type="file" id="fileInput" name="arquivo" accept=".csv,.json,text/csv,application/json" required>
+            </div>
+            <button id="btnImportar" type="submit">Importar Dados</button>
+          </form>
 
           <div class="row" style="margin-top:15px;">
-            <button id="btnImportar" disabled>Importar Dados</button>
-            <button id="btnPadrao" class="btn-secondary">Restaurar Rede Padrão</button>
-            <button id="btnExportar" class="btn-secondary">Baixar JSON Atual</button>
+            <form method="post" action="/html/dados.html">
+              <input type="hidden" name="acao" value="padrao">
+              <button id="btnPadrao" class="btn-secondary" type="submit">Restaurar Rede Padrão</button>
+            </form>
+            <a class="button-link" href="/exportar">Baixar JSON Atual</a>
           </div>
+          <div style="margin-top:15px;">{{ status_importacao }}</div>
 
-          <p class="muted" style="margin-top:15px;">Formato JSON esperado:</p>
-<pre class="exemplo">{
-  "profiles": [{"name": "Ana"}, {"name": "Bruno"}],
-  "connections": [
-    {"from": "Ana", "to": "Bruno", "afinidade": 0.9, "interacoes": 150}
-  ]
-}</pre>
           <p class="muted" style="margin-top:10px;">Formato CSV (conexões; os perfis são deduzidos):</p>
 <pre class="exemplo">from,to,afinidade,interacoes
 Ana,Bruno,0.9,150
 Bruno,Carla,0.7,80</pre>
-          <p class="muted" style="margin-top:10px;">Perfis podem ter <code>x</code> e <code>y</code> opcionais; sem eles, o grafo é distribuído em círculo. O campo <code>weight</code> também é aceito como afinidade.</p>
+          <p class="muted" style="margin-top:10px;">O JSON continua aceitando <code>profiles</code> e <code>connections</code>, com aliases como <code>origem</code>, <code>destino</code>, <code>peso</code> e <code>interactions</code>.</p>
+          <p class="muted" style="margin-top:10px;">O campo de afinidade também pode se chamar <code>weight</code>, <code>peso</code> ou <code>afinidade</code>. Em CSV separado por ponto e vírgula, números decimais também podem usar vírgula.</p>
         </div>
 
         <div class="card">
           <h3>Checklist de Validação do Grafo</h3>
           <p class="muted">Status da leitura, estruturação e validação</p>
           <ul class="status-list" id="checklist">
-            <li id="chk-leitura">Leitura do arquivo</li>
-            <li id="chk-perfis">Estruturação de perfis (nós)</li>
-            <li id="chk-conexoes">Estruturação de conexões (arestas)</li>
-            <li id="chk-orfaos">Validação: sem nós órfãos</li>
-            <li id="chk-duplicados">Validação: sem nomes duplicados</li>
-            <li id="chk-carga">Carga do grafo na aplicação</li>
+            <li>CSV com cabeçalho <code>from,to,afinidade,interacoes</code> (interações opcional)</li>
+            <li>Os perfis são criados a partir das origens e destinos das conexões.</li>
+            <li>Afinidade precisa ser maior que zero; conexões duplicadas e auto conexões são rejeitadas.</li>
           </ul>
         </div>
       </div>
@@ -78,115 +76,20 @@ Bruno,Carla,0.7,80</pre>
         <h3>Dados Atuais da Rede</h3>
         <div class="grid-equal" style="margin-top:12px;">
           <div>
-            <p class="muted" id="tituloPerfis"></p>
-            <div class="chips" id="chipsPerfis"></div>
+            <p class="muted">Perfis carregados</p>
+            <div class="chips" id="chipsPerfis">{{ perfis_rede }}</div>
           </div>
           <div>
-            <p class="muted" id="tituloConexoes"></p>
-            <div class="list scroll-y" id="listaConexoes" style="margin-top:12px;"></div>
+            <p class="muted">Conexões carregadas</p>
+            <div class="list scroll-y" id="listaConexoes" style="margin-top:12px;">{{ conexoes_rede }}</div>
           </div>
         </div>
       </div>
+      <div class="card">
+        <h3>Visualização do Grafo Importado</h3>
+        <div class="canvas-container">{{ grafo_svg }}</div>
+      </div>
     </div>
   </div>
-
-  <script src="../js/grafo.js"></script>
-  <script src="../js/importacao.js"></script>
-  <script>
-    const fileInput = document.getElementById('fileInput');
-    const dropzone = document.getElementById('dropzone');
-    const btnImportar = document.getElementById('btnImportar');
-    let arquivoSelecionado = null;
-
-    function definirStatus(id, estado, detalhe = '') {
-      const item = document.getElementById(`chk-${id}`);
-      item.className = estado;
-      const rotulo = item.dataset.rotulo || (item.dataset.rotulo = item.textContent.trim());
-      const marca = estado === 'ok' ? '✓' : (estado === 'erro' ? '✗' : '○');
-      item.innerHTML = `<span>${marca}</span> ${rotulo}${detalhe ? `<small>${escapar(detalhe)}</small>` : ''}`;
-    }
-
-    function limparChecklist() {
-      ['leitura', 'perfis', 'conexoes', 'orfaos', 'duplicados', 'carga'].forEach(id => definirStatus(id, ''));
-    }
-
-    function mostrarDadosAtuais() {
-      document.getElementById('tituloPerfis').textContent = `Perfis (${grafo.nos.length})`;
-      document.getElementById('chipsPerfis').innerHTML = grafo.nos.map(n => `<span class="chip">${escapar(n.id)}</span>`).join('');
-      document.getElementById('tituloConexoes').textContent = `Conexões (${grafo.arestas.length})`;
-      document.getElementById('listaConexoes').innerHTML = grafo.arestas.map(e => `
-        <div class="list-row">
-          <span>${escapar(e.origem)} &rarr; ${escapar(e.destino)}${e.ativa ? '' : ' <span class="msg-erro">(desativada)</span>'}</span>
-          <span class="badge">afinidade ${formatarNumero(e.afinidade)} · ${formatarNumero(e.interacoes)} interações</span>
-        </div>`).join('');
-    }
-
-    function selecionarArquivo(arquivo) {
-      arquivoSelecionado = arquivo;
-      btnImportar.disabled = !arquivo;
-      document.getElementById('textoDropzone').textContent = arquivo ? `Arquivo selecionado: ${arquivo.name}` : 'Clique ou arraste um arquivo JSON/CSV para enviar';
-      limparChecklist();
-    }
-
-    async function importar() {
-      if (!arquivoSelecionado) return;
-      limparChecklist();
-
-      let dados;
-      try {
-        dados = interpretarArquivoRede(await arquivoSelecionado.text(), arquivoSelecionado.name);
-        definirStatus('leitura', 'ok', arquivoSelecionado.name);
-      } catch (erro) {
-        definirStatus('leitura', 'erro', erro.message);
-        return;
-      }
-
-      const verificacoes = validarRede(dados);
-      Object.entries(verificacoes).forEach(([id, v]) => definirStatus(id, v.ok ? 'ok' : 'erro', v.mensagem));
-
-      if (!Object.values(verificacoes).every(v => v.ok)) {
-        definirStatus('carga', 'erro', 'Importação cancelada: corrija os erros acima');
-        return;
-      }
-
-      try {
-        substituirGrafo(construirGrafo(dados));
-        definirStatus('carga', 'ok', `${grafo.nos.length} perfis, ${grafo.arestas.length} conexões`);
-        mostrarDadosAtuais();
-      } catch (erro) {
-        definirStatus('carga', 'erro', erro.message);
-      }
-    }
-
-    dropzone.addEventListener('click', () => fileInput.click());
-    fileInput.addEventListener('change', () => selecionarArquivo(fileInput.files[0] || null));
-    ['dragover', 'dragenter'].forEach(nome => dropzone.addEventListener(nome, e => { e.preventDefault(); dropzone.classList.add('ativo'); }));
-    ['dragleave', 'drop'].forEach(nome => dropzone.addEventListener(nome, e => { e.preventDefault(); dropzone.classList.remove('ativo'); }));
-    dropzone.addEventListener('drop', e => selecionarArquivo(e.dataTransfer.files[0] || null));
-
-    btnImportar.addEventListener('click', importar);
-
-    document.getElementById('btnPadrao').addEventListener('click', () => {
-      if (!confirm('Substituir a rede atual pela rede padrão? As conexões desativadas serão perdidas.')) return;
-      substituirGrafo(criarGrafoPadrao());
-      limparChecklist();
-      mostrarDadosAtuais();
-    });
-
-    document.getElementById('btnExportar').addEventListener('click', () => {
-      const dados = {
-        profiles: grafo.nos.map(n => ({ name: n.id, x: Math.round(n.x), y: Math.round(n.y) })),
-        connections: grafo.arestas.map(e => ({ from: e.origem, to: e.destino, afinidade: e.afinidade, interacoes: e.interacoes }))
-      };
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(new Blob([JSON.stringify(dados, null, 2)], { type: 'application/json' }));
-      link.download = 'rede.json';
-      link.click();
-      URL.revokeObjectURL(link.href);
-    });
-
-    limparChecklist();
-    mostrarDadosAtuais();
-  </script>
 </body>
 </html>

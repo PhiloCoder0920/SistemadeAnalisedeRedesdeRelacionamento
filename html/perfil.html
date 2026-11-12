@@ -31,10 +31,13 @@
     </div>
     <div class="content-body">
       <div class="card">
+        <form method="get" action="/html/perfil.html" class="row">
         <div class="form-group" style="max-width:300px; margin-bottom:0;">
           <label>Selecionar Usuário</label>
-          <select id="selectUsuarioPerfil"></select>
+          <select id="selectUsuarioPerfil" name="usuario">{{ opcoes_perfil }}</select>
         </div>
+        <button type="submit">Ver Perfil</button>
+        </form>
       </div>
 
       <div class="grid-equal" style="grid-template-columns: 1fr 2fr;">
@@ -43,15 +46,15 @@
           <div class="list">
             <div class="list-row">
               <span class="metric-label"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-7-7 7 7-7 7"/></svg> Segue</span>
-              <strong id="metricSegue"></strong>
+              <strong id="metricSegue">{{ metric_segue }}</strong>
             </div>
             <div class="list-row">
               <span class="metric-label"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5m7 7-7-7 7-7"/></svg> Seguidores</span>
-              <strong id="metricSeguidores"></strong>
+              <strong id="metricSeguidores">{{ metric_seguidores }}</strong>
             </div>
             <div class="list-row">
               <span>Grau total</span>
-              <strong id="metricGrau"></strong>
+              <strong id="metricGrau">{{ metric_grau }}</strong>
             </div>
           </div>
         </div>
@@ -60,60 +63,22 @@
           <h3>Subgrafo de Vizinhança Direta</h3>
           <p class="muted" style="margin-bottom:15px;">Conexões de entrada e saída com pesos de afinidade</p>
           <div class="canvas-container">
-            <canvas id="perfilCanvas"></canvas>
+            {{ grafo_perfil }}
           </div>
         </div>
       </div>
 
       <div class="grid-equal">
         <div class="card">
-          <h3 id="tituloSegue"></h3>
-          <div class="list" id="listaSegue"></div>
+          <h3 id="tituloSegue">{{ titulo_segue }}</h3>
+          <div class="list" id="listaSegue">{{ lista_segue }}</div>
         </div>
         <div class="card">
-          <h3 id="tituloSeguidores"></h3>
-          <div class="list" id="listaSeguidores"></div>
+          <h3 id="tituloSeguidores">{{ titulo_seguidores }}</h3>
+          <div class="list" id="listaSeguidores">{{ lista_seguidores }}</div>
         </div>
       </div>
     </div>
   </div>
-
-  <script src="../js/grafo.js"></script>
-  <script>
-    const selectUser = document.getElementById('selectUsuarioPerfil');
-    grafo.nos.forEach(n => selectUser.add(new Option(n.id, n.id)));
-    if (grafo.temNo('Bruno')) selectUser.value = 'Bruno';
-
-    function linhasVizinhos(arestas, campo) {
-      if (arestas.length === 0) return '<p class="muted">Nenhuma conexão ativa.</p>';
-      return arestas.map(e => `
-        <div class="list-row">
-          <span>${escapar(e[campo])}</span>
-          <span class="badge">afinidade ${formatarNumero(e.afinidade)}</span>
-        </div>`).join('');
-    }
-
-    function atualizarPerfil() {
-      const usuario = selectUser.value;
-      if (!usuario) return;
-      const segue = grafo.saidas(usuario);
-      const seguidores = grafo.entradas(usuario);
-
-      document.getElementById('metricSegue').textContent = segue.length;
-      document.getElementById('metricSeguidores').textContent = seguidores.length;
-      document.getElementById('metricGrau').textContent = segue.length + seguidores.length;
-
-      document.getElementById('tituloSegue').innerHTML = `Quem ${escapar(usuario)} segue`;
-      document.getElementById('tituloSeguidores').innerHTML = `Seguidores de ${escapar(usuario)}`;
-      document.getElementById('listaSegue').innerHTML = linhasVizinhos(segue, 'destino');
-      document.getElementById('listaSeguidores').innerHTML = linhasVizinhos(seguidores, 'origem');
-
-      desenharGrafo('perfilCanvas', [], usuario, usuario);
-    }
-
-    selectUser.addEventListener('change', atualizarPerfil);
-    window.addEventListener('load', atualizarPerfil);
-    window.addEventListener('resize', atualizarPerfil);
-  </script>
 </body>
 </html>

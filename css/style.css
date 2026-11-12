@@ -184,6 +184,28 @@ canvas {
   display: block;
 }
 
+.graph-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.graph-svg .node-label {
+  fill: var(--text-main);
+  font-size: 13px;
+  text-anchor: middle;
+}
+
+.graph-svg .edge-label {
+  fill: var(--text-main);
+  font-size: 11px;
+  text-anchor: middle;
+  paint-order: stroke;
+  stroke: #16161a;
+  stroke-width: 4px;
+  stroke-linejoin: round;
+}
+
 /* Formulários, Seleções e Botões */
 .form-group {
   display: flex;

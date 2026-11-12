@@ -33,19 +33,19 @@
       <div class="grid-4">
         <div class="card stat-card">
           <span>Total de Usuários</span>
-          <h3 id="totalUsuarios"></h3>
+          <h3 id="totalUsuarios">{{ total_usuarios }}</h3>
         </div>
         <div class="card stat-card">
           <span>Conexões Ativas</span>
-          <h3 id="conexoesAtivas"></h3>
+          <h3 id="conexoesAtivas">{{ conexoes_ativas }}</h3>
         </div>
         <div class="card stat-card">
           <span>Usuário Mais Conectado</span>
-          <h3 id="maisConectado"></h3>
+          <h3 id="maisConectado">{{ mais_conectado }}</h3>
         </div>
         <div class="card stat-card">
           <span>Conexões Desativadas</span>
-          <h3 id="conexoesDesativadas" style="color:var(--danger-color);"></h3>
+          <h3 id="conexoesDesativadas" style="color:var(--danger-color);">{{ conexoes_desativadas }}</h3>
         </div>
       </div>
 
@@ -54,44 +54,17 @@
           <h3 style="margin-bottom: 5px;">Visualização do Grafo</h3>
           <p class="muted" style="margin-bottom: 15px;">Nós (usuários) e arestas direcionadas ponderadas por afinidade</p>
           <div class="canvas-container">
-            <canvas id="dashboardCanvas"></canvas>
+            {{ grafo_svg }}
           </div>
         </div>
 
         <div class="card">
           <h3>Usuários Mais Conectados</h3>
           <p class="muted">Ranking por grau de conexão (entrada + saída)</p>
-          <div class="list scroll-y" id="ranking" style="max-height:480px;"></div>
+          <div class="list scroll-y" id="ranking" style="max-height:480px;">{{ ranking }}</div>
         </div>
       </div>
     </div>
   </div>
-
-  <script src="js/grafo.js"></script>
-  <script>
-    function atualizarDashboard() {
-      const ranking = grafo.nos
-        .map(n => ({ id: n.id, grau: grafo.grau(n.id) }))
-        .sort((a, b) => b.grau - a.grau);
-
-      document.getElementById('totalUsuarios').textContent = grafo.nos.length;
-      document.getElementById('conexoesAtivas').textContent = grafo.arestasAtivas.length;
-      document.getElementById('conexoesDesativadas').textContent = grafo.arestasDesativadas.length;
-
-      const lider = ranking[0];
-      document.getElementById('maisConectado').innerHTML = lider
-        ? `${escapar(lider.id)} <small>(${lider.grau} conexões)</small>`
-        : '—';
-
-      document.getElementById('ranking').innerHTML = ranking
-        .map(r => `<div class="list-row"><span>${escapar(r.id)}</span><span class="badge">${r.grau}</span></div>`)
-        .join('');
-
-      desenharGrafo('dashboardCanvas');
-    }
-
-    window.addEventListener('load', atualizarDashboard);
-    window.addEventListener('resize', () => desenharGrafo('dashboardCanvas'));
-  </script>
 </body>
 </html>

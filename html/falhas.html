@@ -36,163 +36,59 @@
             <h3>Grafo da Rede</h3>
             <p class="muted" style="margin-bottom:15px;">Arestas desativadas aparecem tracejadas em vermelho; a rota atual aparece em verde</p>
             <div class="canvas-container">
-              <canvas id="falhasCanvas"></canvas>
+              {{ grafo_svg }}
             </div>
           </div>
 
           <div class="card">
             <h3>Rota Atual</h3>
-            <div id="resultadoBox" class="muted" style="margin-top:12px;"></div>
+            <div id="resultadoBox" class="muted" style="margin-top:12px;">{{ resultado }}</div>
           </div>
         </div>
 
         <div style="display:flex; flex-direction:column; gap:20px;">
           <div class="card">
             <h3>Simular Bloqueio</h3>
-            <div class="form-group" style="margin-top:15px;">
-              <label>Conexão a desativar</label>
-              <select id="selectConexao"></select>
-            </div>
-            <button id="btnBloquear" class="btn-danger" style="width:100%;">Simular Bloqueio</button>
+            <form method="post" action="/html/falhas.html" style="margin-top:15px;">
+              <input type="hidden" name="acao" value="bloquear">
+              <input type="hidden" name="origem" value="{{ origem }}">
+              <input type="hidden" name="destino" value="{{ destino }}">
+              <div class="form-group">
+                <label for="selectConexao">Conexão a desativar</label>
+                <select id="selectConexao" name="conexao">{{ opcoes_conexao }}</select>
+              </div>
+              <button id="btnBloquear" class="btn-danger" style="width:100%;">Simular Bloqueio</button>
+            </form>
 
-            <div class="list" id="listaDesativadas"></div>
-            <button id="btnRestaurar" class="btn-secondary" style="width:100%; margin-top:12px;">Restaurar Todas as Conexões</button>
+            <div class="list" id="listaDesativadas">{{ conexoes_bloqueadas }}</div>
+            <form method="post" action="/html/falhas.html" style="margin-top:12px;">
+              <input type="hidden" name="acao" value="restaurar">
+              <button id="btnRestaurar" class="btn-secondary" style="width:100%;">Restaurar Todas as Conexões</button>
+            </form>
           </div>
 
           <div class="card">
             <h3>Recalcular Rota</h3>
             <p class="muted">A rota é recalculada automaticamente a cada bloqueio ou restauração</p>
-            <div class="form-group" style="margin-top:10px;">
-              <label>Origem</label>
-              <select id="selectOrigemFalha"></select>
-            </div>
-            <div class="form-group">
-              <label>Destino</label>
-              <select id="selectDestinoFalha"></select>
-            </div>
-            <div class="row" style="margin-bottom:16px;">
-              <label><input type="radio" name="algo" value="dijkstra" checked> Dijkstra</label>
-              <label><input type="radio" name="algo" value="bfs"> BFS</label>
-            </div>
-            <button id="btnRecalcular" style="width:100%;">Recalcular Caminho Alternativo</button>
+            <form method="post" action="/html/falhas.html" style="margin-top:10px;">
+              <input type="hidden" name="acao" value="recalcular">
+              <div class="form-group">
+                <label for="selectOrigemFalha">Origem</label>
+                <select id="selectOrigemFalha" name="origem">{{ opcoes_origem }}</select>
+              </div>
+              <div class="form-group">
+                <label for="selectDestinoFalha">Destino</label>
+                <select id="selectDestinoFalha" name="destino">{{ opcoes_destino }}</select>
+              </div>
+              <div class="row" style="margin-bottom:16px;">
+                <label><input type="radio" name="algo" value="dijkstra" checked> Dijkstra</label>
+              </div>
+              <button id="btnRecalcular" style="width:100%;">Recalcular Caminho Alternativo</button>
+            </form>
           </div>
         </div>
       </div>
     </div>
   </div>
-
-  <script src="../js/grafo.js"></script>
-  <script src="../js/algoritmos.js"></script>
-  <script>
-    const selectConexao = document.getElementById('selectConexao');
-    const selectOrigem = document.getElementById('selectOrigemFalha');
-    const selectDestino = document.getElementById('selectDestinoFalha');
-    const resultadoBox = document.getElementById('resultadoBox');
-
-    const rotulo = (e) => `${e.origem} → ${e.destino} (afinidade ${formatarNumero(e.afinidade)})`;
-
-    function preencherPerfis() {
-      grafo.nos.forEach(n => {
-        selectOrigem.add(new Option(n.id, n.id));
-        selectDestino.add(new Option(n.id, n.id));
-      });
-      if (grafo.nos.length > 1) selectDestino.selectedIndex = Math.min(2, grafo.nos.length - 1);
-    }
-
-    function preencherConexoes() {
-      selectConexao.innerHTML = '';
-      grafo.arestasAtivas.forEach(e => selectConexao.add(new Option(rotulo(e), `${e.origem}\n${e.destino}`)));
-      document.getElementById('btnBloquear').disabled = grafo.arestasAtivas.length === 0;
-    }
-
-    function preencherDesativadas() {
-      const desativadas = grafo.arestasDesativadas;
-      document.getElementById('listaDesativadas').innerHTML = desativadas.map((e, i) => `
-        <div class="list-row">
-          <span class="msg-erro">${escapar(e.origem)} &rarr; ${escapar(e.destino)}</span>
-          <button class="btn-secondary" data-indice="${i}" style="padding:4px 10px; font-size:0.8rem;">Reativar</button>
-        </div>`).join('');
-      document.getElementById('btnRestaurar').disabled = desativadas.length === 0;
-    }
-
-    function descreverRota(caminho, algoritmo) {
-      const resumo = resumirCaminho(caminho);
-      return `${caminho.map(escapar).join(' &rarr; ')}
-        <span class="badge">${resumo.saltos} ${resumo.saltos === 1 ? 'salto' : 'saltos'} · afinidade ${formatarNumero(resumo.afinidadeTotal)} · distância ${resumo.custo.toFixed(3)}</span>`;
-    }
-
-    function recalcular() {
-      const origem = selectOrigem.value;
-      const destino = selectDestino.value;
-      const algoritmo = document.querySelector('input[name="algo"]:checked').value;
-
-      if (!origem || !destino || origem === destino) {
-        desenharGrafo('falhasCanvas');
-        resultadoBox.innerHTML = '<p>Escolha origem e destino diferentes para calcular a rota.</p>';
-        return;
-      }
-
-      const rotaOriginal = grafo.comTodasAtivas(() => calcularRota(origem, destino, algoritmo));
-      const rotaAtual = calcularRota(origem, destino, algoritmo);
-      const houveFalha = grafo.arestasDesativadas.length > 0;
-      const mesmaRota = rotaAtual && rotaOriginal && rotaAtual.join() === rotaOriginal.join();
-
-      desenharGrafo('falhasCanvas', rotaAtual || []);
-
-      let html = '';
-      if (rotaOriginal) {
-        html += `<p><strong>Rota com a rede íntegra:</strong><br>${descreverRota(rotaOriginal, algoritmo)}</p>`;
-      }
-
-      if (!houveFalha) {
-        html += rotaAtual ? '' : `<p class="msg-erro" style="margin-top:10px;">Nenhuma rota entre ${escapar(origem)} e ${escapar(destino)}.</p>`;
-      } else if (!rotaAtual) {
-        html += `<p class="msg-erro" style="margin-top:10px;"><strong>Rede desconexa:</strong> não há rota alternativa entre ${escapar(origem)} e ${escapar(destino)}.</p>`;
-      } else if (mesmaRota) {
-        html += `<p class="msg-ok" style="margin-top:10px;">A rota não foi afetada pelas ${grafo.arestasDesativadas.length} conexão(ões) desativada(s).</p>`;
-      } else {
-        html += `<p class="msg-ok" style="margin-top:10px;"><strong>Rota alternativa:</strong><br>${descreverRota(rotaAtual, algoritmo)}</p>`;
-      }
-      resultadoBox.innerHTML = html;
-    }
-
-    function atualizarTudo() {
-      salvarGrafo();
-      preencherConexoes();
-      preencherDesativadas();
-      recalcular();
-    }
-
-    document.getElementById('btnBloquear').addEventListener('click', () => {
-      if (!selectConexao.value) return;
-      const [origem, destino] = selectConexao.value.split('\n');
-      grafo.desativarAresta(origem, destino);
-      atualizarTudo();
-    });
-
-    document.getElementById('listaDesativadas').addEventListener('click', (evento) => {
-      const botao = evento.target.closest('button[data-indice]');
-      if (!botao) return;
-      const aresta = grafo.arestasDesativadas[Number(botao.dataset.indice)];
-      grafo.reativarAresta(aresta.origem, aresta.destino);
-      atualizarTudo();
-    });
-
-    document.getElementById('btnRestaurar').addEventListener('click', () => {
-      grafo.reativarTodas();
-      atualizarTudo();
-    });
-
-    document.getElementById('btnRecalcular').addEventListener('click', recalcular);
-    selectOrigem.addEventListener('change', recalcular);
-    selectDestino.addEventListener('change', recalcular);
-    document.querySelectorAll('input[name="algo"]').forEach(r => r.addEventListener('change', recalcular));
-    window.addEventListener('resize', recalcular);
-
-    preencherPerfis();
-    preencherConexoes();
-    preencherDesativadas();
-    window.addEventListener('load', recalcular);
-  </script>
 </body>
 </html>

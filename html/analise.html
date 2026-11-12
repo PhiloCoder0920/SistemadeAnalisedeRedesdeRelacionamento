@@ -31,150 +31,53 @@
     </div>
     <div class="content-body">
 
+      <form method="post" action="/html/analise.html">
       <div class="card">
         <h3>Floyd-Warshall: Caminhos Mínimos entre Todos os Pares</h3>
         <div class="row" style="margin:12px 0;">
-          <label><input type="radio" name="criterio" value="saltos" checked> Graus de separação (saltos)</label>
-          <label><input type="radio" name="criterio" value="custo"> Distância social (soma de 1/afinidade)</label>
+          <label><input type="radio" name="criterio" value="saltos"{{ criterio_saltos }}> Graus de separação (saltos)</label>
+          <label><input type="radio" name="criterio" value="custo"{{ criterio_custo }}> Distância social (soma de 1/afinidade)</label>
         </div>
-        <div class="matriz" id="matriz"></div>
-        <p class="muted" id="resumoMatriz" style="margin-top:12px;"></p>
+        <div class="matriz" id="matriz">{{ matriz_caminhos }}</div>
+        <p class="muted" id="resumoMatriz" style="margin-top:12px;">Considere apenas conexões ativas.</p>
       </div>
 
       <div class="grid-equal">
         <div class="card">
           <h3>Componentes Fortemente Conexos</h3>
           <p class="muted">Grupos em que todos alcançam todos (comunidades recíprocas)</p>
-          <div class="list" id="listaSCC"></div>
+          <div class="list" id="listaSCC">{{ componentes_scc }}</div>
         </div>
 
         <div class="card">
           <h3>Ciclos de Relacionamento (DFS)</h3>
-          <p class="muted" id="resumoCiclos"></p>
-          <div class="list scroll-y" id="listaCiclos"></div>
+          <p class="muted" id="resumoCiclos">{{ resumo_ciclos }}</p>
+          <div class="list scroll-y" id="listaCiclos">{{ lista_ciclos }}</div>
         </div>
       </div>
 
       <div class="card">
         <h3>Cadeias de Influência Alternativas (DFS)</h3>
-        <p class="muted" style="margin-bottom:15px;">Todos os caminhos simples entre dois perfis, da menor distância social para a maior</p>
+        <p class="muted" style="margin-bottom:15px;">Caminhos simples entre dois perfis, ordenados por distância social (exibição limitada a 100 caminhos)</p>
         <div class="grid-equal">
           <div class="form-group">
             <label>Origem</label>
-            <select id="selectOrigem"></select>
+            <select id="selectOrigem" name="origem">{{ opcoes_analise_origem }}</select>
           </div>
           <div class="form-group">
             <label>Destino</label>
-            <select id="selectDestino"></select>
+            <select id="selectDestino" name="destino">{{ opcoes_analise_destino }}</select>
           </div>
         </div>
         <div class="row">
-          <button id="btnCadeias">Buscar Cadeias</button>
-          <button id="btnDFS" class="btn-secondary">Ordem de Visita DFS a partir da Origem</button>
+          <button id="btnCadeias" name="acao" value="cadeias">Buscar Cadeias</button>
+          <button id="btnDFS" class="btn-secondary" name="acao" value="dfs">Ordem de Visita DFS a partir da Origem</button>
         </div>
-        <div class="list" id="listaCadeias"></div>
+        <div class="list" id="listaCadeias">{{ resultado_cadeias }}</div>
       </div>
+      </form>
 
     </div>
   </div>
-
-  <script src="../js/grafo.js"></script>
-  <script src="../js/algoritmos.js"></script>
-  <script>
-    const selectOrigem = document.getElementById('selectOrigem');
-    const selectDestino = document.getElementById('selectDestino');
-
-    grafo.nos.forEach(n => {
-      selectOrigem.add(new Option(n.id, n.id));
-      selectDestino.add(new Option(n.id, n.id));
-    });
-    if (grafo.nos.length > 1) selectDestino.selectedIndex = Math.min(2, grafo.nos.length - 1);
-
-    function renderizarMatriz() {
-      const criterio = document.querySelector('input[name="criterio"]:checked').value;
-      const resultado = floydWarshall(criterio);
-      const { nomes, dist } = resultado;
-
-      const cabecalho = nomes.map(n => `<th>${escapar(n)}</th>`).join('');
-      const linhas = nomes.map((nome, i) => {
-        const celulas = nomes.map((_, j) => {
-          if (i === j) return '<td class="diagonal">0</td>';
-          if (dist[i][j] === Infinity) return '<td class="sem-rota">&infin;</td>';
-          return `<td>${criterio === 'saltos' ? dist[i][j] : dist[i][j].toFixed(2)}</td>`;
-        }).join('');
-        return `<tr><th>${escapar(nome)}</th>${celulas}</tr>`;
-      }).join('');
-
-      document.getElementById('matriz').innerHTML =
-        `<table><thead><tr><th></th>${cabecalho}</tr></thead><tbody>${linhas}</tbody></table>`;
-
-      let alcancaveis = 0, soma = 0, maior = 0, parMaior = null;
-      nomes.forEach((origem, i) => nomes.forEach((destino, j) => {
-        if (i === j || dist[i][j] === Infinity) return;
-        alcancaveis++;
-        soma += dist[i][j];
-        if (dist[i][j] > maior) { maior = dist[i][j]; parMaior = `${origem} → ${destino}`; }
-      }));
-
-      const totalPares = nomes.length * (nomes.length - 1);
-      const media = alcancaveis ? (soma / alcancaveis) : 0;
-      document.getElementById('resumoMatriz').textContent = alcancaveis
-        ? `${alcancaveis} de ${totalPares} pares ordenados são alcançáveis. Média: ${media.toFixed(2)}. Maior distância: ${maior.toFixed(2)} (${parMaior}).`
-        : 'Nenhum par de perfis é alcançável.';
-    }
-
-    function renderizarComponentes() {
-      const componentes = componentesFortementeConexos();
-      document.getElementById('listaSCC').innerHTML = componentes.map((c, i) => `
-        <div class="list-row">
-          <span><strong>Grupo ${i + 1}</strong>: ${c.map(escapar).join(', ')}</span>
-          <span class="badge">${c.length} ${c.length === 1 ? 'perfil' : 'perfis'}</span>
-        </div>`).join('');
-    }
-
-    function renderizarCiclos() {
-      const ciclos = detectarCiclos();
-      document.getElementById('resumoCiclos').textContent = ciclos.length
-        ? `${ciclos.length}${ciclos.length >= 100 ? '+' : ''} ciclos encontrados (do menor para o maior)`
-        : 'Nenhum ciclo encontrado';
-      document.getElementById('listaCiclos').innerHTML = ciclos.map(c => `
-        <div class="list-row">
-          <span>${c.map(escapar).join(' &rarr; ')}</span>
-          <span class="badge">${c.length - 1} perfis</span>
-        </div>`).join('');
-    }
-
-    document.getElementById('btnCadeias').addEventListener('click', () => {
-      const origem = selectOrigem.value, destino = selectDestino.value;
-      const caixa = document.getElementById('listaCadeias');
-      if (origem === destino) {
-        caixa.innerHTML = '<p class="msg-erro">Escolha origem e destino diferentes.</p>';
-        return;
-      }
-      const cadeias = encontrarCaminhosAlternativos(origem, destino, 10);
-      caixa.innerHTML = cadeias.length
-        ? cadeias.map(({ caminho, resumo }, i) => `
-            <div class="list-row">
-              <span>${i + 1}. ${caminho.map(escapar).join(' &rarr; ')}</span>
-              <span class="badge">${resumo.saltos} saltos · distância ${resumo.custo.toFixed(2)}</span>
-            </div>`).join('')
-        : `<p class="msg-erro">Nenhuma cadeia entre ${escapar(origem)} e ${escapar(destino)}.</p>`;
-    });
-
-    document.getElementById('btnDFS').addEventListener('click', () => {
-      const ordem = executarDFS(selectOrigem.value);
-      document.getElementById('listaCadeias').innerHTML = `
-        <div class="list-row">
-          <span><strong>Ordem de visita:</strong> ${ordem.map(escapar).join(' &rarr; ')}</span>
-          <span class="badge">${ordem.length} alcançados</span>
-        </div>`;
-    });
-
-    document.querySelectorAll('input[name="criterio"]').forEach(r => r.addEventListener('change', renderizarMatriz));
-
-    renderizarMatriz();
-    renderizarComponentes();
-    renderizarCiclos();
-  </script>
 </body>
 </html>

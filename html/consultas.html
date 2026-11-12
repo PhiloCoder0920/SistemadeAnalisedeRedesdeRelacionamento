@@ -34,96 +34,43 @@
         <h3>Parâmetros da Consulta</h3>
         <p class="muted" style="margin-bottom:15px;">Selecione origem, destino e o critério de busca</p>
 
+        <form method="post" action="/html/consultas.html">
         <div class="grid-equal">
           <div class="form-group">
             <label>Usuário de Origem</label>
-            <select id="selectOrigem"></select>
+            <select id="selectOrigem" name="origem">{{ opcoes_origem }}</select>
           </div>
           <div class="form-group">
             <label>Usuário de Destino</label>
-            <select id="selectDestino"></select>
+            <select id="selectDestino" name="destino">{{ opcoes_destino }}</select>
           </div>
         </div>
 
         <div class="form-group">
           <label>Critério</label>
           <div class="row">
-            <label><input type="radio" name="algo" value="bfs" checked> Menor Grau de Separação (BFS)</label>
-            <label><input type="radio" name="algo" value="dijkstra"> Maior Afinidade (Dijkstra, custo = 1/afinidade)</label>
+            <label><input type="radio" name="algo" value="dijkstra" checked> Maior Afinidade (Dijkstra, custo = 1/afinidade)</label>
           </div>
         </div>
 
-        <button id="btnResolver" style="width:150px;">Resolver</button>
+        <button id="btnResolver" name="acao" value="rota" style="width:150px;">Resolver</button>
+        </form>
       </div>
 
       <div class="grid-2">
         <div class="card">
           <h3>Grafo com Rota Destacada</h3>
           <div class="canvas-container" style="margin-top:15px;">
-            <canvas id="consultasCanvas"></canvas>
+            {{ grafo_svg }}
           </div>
         </div>
 
         <div class="card">
           <h3>Resultado</h3>
-          <div id="resultadoBox" class="muted" style="margin-top:15px;">
-            Execute uma consulta para ver o resultado detalhado da rota.
-          </div>
+          <div id="resultadoBox" class="muted" style="margin-top:15px;">{{ resultado }}</div>
         </div>
       </div>
     </div>
   </div>
-
-  <script src="../js/grafo.js"></script>
-  <script src="../js/algoritmos.js"></script>
-  <script>
-    const selectOrigem = document.getElementById('selectOrigem');
-    const selectDestino = document.getElementById('selectDestino');
-    const resultadoBox = document.getElementById('resultadoBox');
-
-    grafo.nos.forEach(n => {
-      selectOrigem.add(new Option(n.id, n.id));
-      selectDestino.add(new Option(n.id, n.id));
-    });
-    if (grafo.nos.length > 1) selectDestino.selectedIndex = Math.min(2, grafo.nos.length - 1);
-
-    window.addEventListener('load', () => desenharGrafo('consultasCanvas'));
-    window.addEventListener('resize', () => desenharGrafo('consultasCanvas'));
-
-    function mostrarErro(mensagem) {
-      desenharGrafo('consultasCanvas');
-      resultadoBox.innerHTML = `<p class="msg-erro">${mensagem}</p>`;
-    }
-
-    document.getElementById('btnResolver').addEventListener('click', () => {
-      const origem = selectOrigem.value;
-      const destino = selectDestino.value;
-      const algoritmo = document.querySelector('input[name="algo"]:checked').value;
-
-      if (!origem || !destino) return mostrarErro('A rede não possui perfis carregados.');
-      if (origem === destino) return mostrarErro('Escolha origem e destino diferentes.');
-
-      const caminho = calcularRota(origem, destino, algoritmo);
-      if (!caminho) return mostrarErro(`Nenhum caminho disponível entre ${escapar(origem)} e ${escapar(destino)}.`);
-
-      const resumo = resumirCaminho(caminho);
-      desenharGrafo('consultasCanvas', caminho);
-
-      const linhas = resumo.passos.map((p, i) => `
-        <tr><td>${i + 1}</td><td>${escapar(p.origem)} &rarr; ${escapar(p.destino)}</td><td>${formatarNumero(p.afinidade)}</td><td>${formatarNumero(p.interacoes)}</td></tr>`).join('');
-
-      resultadoBox.innerHTML = `
-        <p class="msg-ok" style="font-weight:bold;">Rota encontrada (${algoritmo === 'bfs' ? 'BFS' : 'Dijkstra'})</p>
-        <p style="margin-top:10px;"><strong>Caminho:</strong> ${caminho.map(escapar).join(' &rarr; ')}</p>
-        <p style="margin-top:5px;"><strong>Graus de separação:</strong> ${resumo.saltos} ${resumo.saltos === 1 ? 'salto' : 'saltos'}</p>
-        <p style="margin-top:5px;"><strong>Afinidade acumulada:</strong> ${formatarNumero(resumo.afinidadeTotal)} (média ${formatarNumero(resumo.afinidadeMedia)})</p>
-        <p style="margin-top:5px;"><strong>Distância social (soma de 1/afinidade):</strong> ${resumo.custo.toFixed(3)}</p>
-        <p style="margin-top:5px;"><strong>Interações no trajeto:</strong> ${formatarNumero(resumo.interacoes)}</p>
-        <table style="margin-top:15px;">
-          <thead><tr><th>Passo</th><th>Conexão</th><th>Afinidade</th><th>Interações</th></tr></thead>
-          <tbody>${linhas}</tbody>
-        </table>`;
-    });
-  </script>
 </body>
 </html>

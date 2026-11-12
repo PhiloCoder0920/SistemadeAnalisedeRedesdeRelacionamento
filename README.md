@@ -1,33 +1,34 @@
 # Sistema de Análise de Redes de Relacionamento
 
-Projeto prático de Teoria dos Grafos (Tema 3). Aplicação web estática (HTML, CSS e JavaScript, sem dependências): abra `index.html` no navegador.
+Projeto prático de Teoria dos Grafos (Tema 3). Para usar a interface HTML sem JavaScript, inicie o servidor Python:
+
+```powershell
+python app.py
+```
+
+Abra <http://127.0.0.1:5500>. O modelo existente está em `rede_relacionamento.py`; a interface usa `dados/exemplo-pdf.json`.
 
 ## Modelo
 
 Grafo **direcionado e ponderado**: vértices são usuários e arestas `u → v` são relações assimétricas ("u segue v"). Cada aresta tem `afinidade` (maior = mais próximo) e `interacoes`. Nos algoritmos de menor caminho o custo da aresta é `1 / afinidade`.
 
-## Páginas
+## Interface
 
 | Página | Conteúdo |
 |---|---|
-| Início | Métricas gerais, grafo e ranking de grau |
-| Consultas | Menor grau de separação (BFS) e maior afinidade (Dijkstra), com rota passo a passo |
-| Análise | Floyd-Warshall (todos os pares), componentes fortemente conexos (Tarjan), ciclos e cadeias alternativas (DFS) |
-| Falhas | Desativa conexões e recalcula a rota automaticamente; permite reativar |
-| Perfil | Vizinhança direta de um usuário |
-| Dados | Importação JSON/CSV com validação, exportação e restauração da rede padrão |
+| Início | Métricas da rede, grafo, ranking e conexões desativadas |
+| Consultas | Caminho de menor distância social usando Dijkstra |
+| Análise | Matriz Floyd-Warshall, componentes fortemente conexos, ciclos e busca DFS |
+| Falhas | Bloqueio de conexão e recálculo da rota |
+| Perfil | Métricas, seguidores, conexões e vizinhança direta de um perfil |
+| Dados | Importação de CSV/JSON e visualização da rede atual |
 
 ## Estrutura
 
-- `js/grafo.js`: classe `Grafo`, rede padrão, persistência (`localStorage`) e desenho no canvas
-- `js/algoritmos.js`: BFS, Dijkstra, Floyd-Warshall, DFS, ciclos e SCC
-- `js/importacao.js`: leitura e validação de JSON/CSV
-- `dados/`: arquivos de exemplo para importar (incluem o Exemplo 1 do enunciado)
+- `app.py`: servidor HTTP simples que conecta os formulários HTML ao modelo Python
+- `rede_relacionamento.py`: classe original `GrafoSocial` e algoritmo Dijkstra
+- `html/` e `index.html`: páginas da interface
+- `css/`: estilos
+- `dados/exemplo-pdf.json`: rede carregada pelo servidor
 
-## Formatos de importação
-
-JSON: `{"profiles": [{"name": "Ana"}], "connections": [{"from": "Ana", "to": "Bruno", "afinidade": 0.9, "interacoes": 150}]}`
-
-CSV: cabeçalho `from,to,afinidade,interacoes` (aceita `;` e os aliases `origem,destino,peso`).
-
-Regras de validação: afinidade maior que 0, sem perfis duplicados, sem perfis órfãos, sem conexões duplicadas ou para si mesmo.
+Na página Dados, importe um CSV com cabeçalho `from,to,afinidade` (ou `origem,destino,peso`); `interacoes` é opcional. O grafo importado aparece nas páginas Início e Dados. A importação e os bloqueios ficam ativos enquanto o servidor estiver executando; ao reiniciá-lo, a rede volta ao exemplo.
