@@ -3,11 +3,14 @@ import html
 import io
 import json
 import math
+import os
 from email import policy
 from email.parser import BytesParser
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
+
+from flask import Flask, Response, request
 
 from rede_relacionamento import GrafoSocial
 
@@ -28,7 +31,87 @@ def carregar_grafo():
         rede.adicionar_conexao(
             conexao["from"], conexao["to"], conexao["afinidade"]
         )
+        rede.adj[conexao["from"]][-1]["interacoes"] = conexao.get("interacoes", 0)
     return rede
+
+
+def usar_blob():
+    return os.environ.get("VERCEL") == "1"
+
+
+def serializar_grafo():
+    return {
+        "profiles": [{"name": uid} for uid in grafo.usuarios],
+        "connections": [
+            {
+                "from": origem,
+                "to": aresta["destino"],
+                "afinidade": 1 / aresta["peso"],
+                "interacoes": aresta.get("interacoes", 0),
+                "ativa": aresta["ativa"],
+            }
+            for origem, arestas in grafo.adj.items()
+            for aresta in arestas
+        ],
+    }
+
+
+def desserializar_grafo(dados):
+    if not isinstance(dados, dict) or not isinstance(dados.get("profiles"), list):
+        raise ValueError("O arquivo persistido da rede está inválido.")
+    if not isinstance(dados.get("connections"), list):
+        raise ValueError("O arquivo persistido não contém conexões válidas.")
+
+    rede = GrafoSocial()
+    for perfil in dados["profiles"]:
+        if not isinstance(perfil, dict) or not perfil.get("name"):
+            raise ValueError("Há um perfil inválido no arquivo persistido.")
+        rede.adicionar_usuario(perfil["name"], perfil.get("display_name", perfil["name"]))
+    for conexao in dados["connections"]:
+        if not isinstance(conexao, dict):
+            raise ValueError("Há uma conexão inválida no arquivo persistido.")
+        origem = conexao.get("from")
+        destino = conexao.get("to")
+        afinidade = conexao.get("afinidade")
+        if origem not in rede.usuarios or destino not in rede.usuarios:
+            raise ValueError("Uma conexão persistida aponta para perfil inexistente.")
+        rede.adicionar_conexao(origem, destino, float(afinidade))
+        aresta = rede.adj[origem][-1]
+        aresta["interacoes"] = conexao.get("interacoes", 0)
+        aresta["ativa"] = bool(conexao.get("ativa", True))
+    return rede
+
+
+def carregar_grafo_persistido():
+    from vercel.blob import sync as blob
+
+    try:
+        resultado = blob.get_blob("rede-atual.json", access="private")
+    except blob.BlobNotFoundError:
+        return carregar_grafo()
+    except blob.BlobError as erro:
+        raise RuntimeError(f"Falha ao carregar a rede no Vercel Blob: {erro}") from erro
+    try:
+        return desserializar_grafo(json.loads(resultado.body.decode("utf-8")))
+    except (UnicodeDecodeError, json.JSONDecodeError, KeyError, TypeError, ValueError) as erro:
+        raise RuntimeError(f"Não foi possível ler a rede salva no Vercel Blob: {erro}") from erro
+
+
+def salvar_grafo_persistido():
+    from vercel.blob import sync as blob
+
+    conteudo = json.dumps(serializar_grafo(), ensure_ascii=False).encode("utf-8")
+    try:
+        blob.put_blob(
+            "rede-atual.json",
+            conteudo,
+            access="private",
+            content_type="application/json",
+            cache_control_max_age=0,
+            allow_overwrite=True,
+        )
+    except blob.BlobError as erro:
+        raise RuntimeError(f"Falha ao salvar a rede no Vercel Blob: {erro}") from erro
 
 
 def opcoes_usuarios(selecionado):
@@ -540,54 +623,149 @@ def importar_csv(arquivo):
     )
 
 
+def processar_get(caminho, consulta=""):
+    caminho = urlsplit(caminho).path
+    if caminho == "/css/style.css":
+        return 200, "text/css; charset=utf-8", (ROOT / "css" / "style.css").read_bytes()
+    if caminho == "/exportar":
+        conteudo = json.dumps(serializar_grafo(), ensure_ascii=False, indent=2).encode("utf-8")
+        return 200, "application/json; charset=utf-8", conteudo
+
+    parametros = parse_qs(consulta)
+    usuario_perfil = parametros.get("usuario", [""])[0]
+    conteudo = renderizar(caminho, usuario_perfil=usuario_perfil)
+    if conteudo is None:
+        return 404, "text/plain; charset=utf-8", b"Pagina nao encontrada."
+    return 200, "text/html; charset=utf-8", conteudo
+
+
+def processar_post(caminho, formulario, arquivos):
+    caminho = urlsplit(caminho).path
+    if caminho not in (
+        "/html/consultas.html",
+        "/html/analise.html",
+        "/html/falhas.html",
+        "/html/dados.html",
+    ):
+        return 404, "text/plain; charset=utf-8", b"Pagina nao encontrada."
+
+    valor = lambda chave, padrao="": formulario.get(chave, [padrao])[0]
+    origem = valor("origem", next(iter(grafo.usuarios), ""))
+    destino = valor("destino", list(grafo.usuarios)[-1])
+    resultado = ""
+    caminho_destacado = None
+
+    if caminho == "/html/analise.html":
+        conteudo = renderizar(
+            caminho,
+            origem,
+            destino,
+            criterio_analise=valor("criterio", "saltos"),
+            acao_analise=valor("acao"),
+        )
+        return 200, "text/html; charset=utf-8", conteudo
+
+    if caminho == "/html/dados.html":
+        acao = valor("acao")
+        if acao == "importar":
+            status_importacao = importar_arquivo(arquivos.get("arquivo"))
+            return 200, "text/html; charset=utf-8", renderizar(
+                caminho, status_importacao=status_importacao
+            )
+        if acao == "padrao":
+            rede_padrao = carregar_grafo()
+            grafo.usuarios.clear()
+            grafo.usuarios.update(rede_padrao.usuarios)
+            grafo.adj.clear()
+            grafo.adj.update(rede_padrao.adj)
+            resultado = '<p class="msg-ok">Rede de exemplo restaurada.</p>'
+            return 200, "text/html; charset=utf-8", renderizar(
+                caminho, status_importacao=resultado
+            )
+        return 400, "text/plain; charset=utf-8", b"Acao invalida."
+
+    acao = valor("acao")
+    if acao in ("rota", "recalcular"):
+        if origem not in grafo.usuarios or destino not in grafo.usuarios:
+            resultado = '<p class="msg-erro">Selecione usuários existentes na rede.</p>'
+        elif origem == destino:
+            resultado = '<p class="msg-erro">Escolha origem e destino diferentes.</p>'
+        else:
+            rota, custo = grafo.dijkstra(origem, destino)
+            if rota:
+                caminho_destacado = rota
+                rota_formatada = " → ".join(html.escape(nome) for nome in rota)
+                resultado = (
+                    f'<p class="msg-ok"><strong>Rota encontrada:</strong> {rota_formatada}</p>'
+                    f"<p><strong>Distância social:</strong> {custo:.2f}</p>"
+                )
+            else:
+                resultado = '<p class="msg-erro">Não há rota disponível entre esses usuários.</p>'
+    elif acao == "bloquear":
+        conexoes = [
+            (uid, aresta["destino"])
+            for uid, arestas in grafo.adj.items()
+            for aresta in arestas
+            if aresta["ativa"]
+        ]
+        try:
+            indice = int(valor("conexao", "-1"))
+            if indice < 0:
+                raise IndexError
+            corte_u, corte_v = conexoes[indice]
+        except (ValueError, IndexError):
+            resultado = '<p class="msg-erro">Selecione uma conexão ativa.</p>'
+        else:
+            grafo.desativar_conexao(corte_u, corte_v)
+            rota, custo = grafo.dijkstra(origem, destino)
+            mensagem = f"Conexão {html.escape(corte_u)} → {html.escape(corte_v)} desativada."
+            if rota:
+                caminho_destacado = rota
+                rota_formatada = " → ".join(html.escape(nome) for nome in rota)
+                resultado = (
+                    f'<p class="msg-ok">{mensagem}</p>'
+                    f"<p><strong>Rota alternativa:</strong> {rota_formatada}</p>"
+                    f"<p><strong>Distância social:</strong> {custo:.2f}</p>"
+                )
+            else:
+                resultado = f'<p class="msg-erro">{mensagem} Não há rota alternativa.</p>'
+    elif acao == "restaurar":
+        for arestas in grafo.adj.values():
+            for aresta in arestas:
+                aresta["ativa"] = True
+        resultado = '<p class="msg-ok">Todas as conexões foram restauradas.</p>'
+    else:
+        return 400, "text/plain; charset=utf-8", b"Acao invalida."
+
+    return 200, "text/html; charset=utf-8", renderizar(
+        caminho,
+        origem,
+        destino,
+        resultado,
+        caminho_destacado=caminho_destacado,
+    )
+
+
 class ServidorRede(BaseHTTPRequestHandler):
-    def responder(self, conteudo, tipo="text/html; charset=utf-8", status=200):
+    def responder(self, conteudo, tipo="text/html; charset=utf-8", status=200, cabecalhos=None):
         self.send_response(status)
         self.send_header("Content-Type", tipo)
         self.send_header("Content-Length", str(len(conteudo)))
+        for nome, valor in (cabecalhos or {}).items():
+            self.send_header(nome, valor)
         self.end_headers()
         self.wfile.write(conteudo)
 
     def do_GET(self):
-        caminho = urlsplit(self.path).path
-        if caminho == "/css/style.css":
-            self.responder((ROOT / "css" / "style.css").read_bytes(), "text/css; charset=utf-8")
-            return
-        if caminho == "/exportar":
-            dados = {
-                "profiles": [{"name": uid} for uid in grafo.usuarios],
-                "connections": [
-                    {
-                        "from": origem,
-                        "to": aresta["destino"],
-                        "afinidade": 1 / aresta["peso"],
-                        "interacoes": aresta.get("interacoes", 0),
-                    }
-                    for origem, arestas in grafo.adj.items() for aresta in arestas
-                ],
-            }
-            conteudo = json.dumps(dados, ensure_ascii=False, indent=2).encode("utf-8")
-            self.responder(conteudo, "application/json; charset=utf-8")
-            return
-        parametros = parse_qs(urlsplit(self.path).query)
-        usuario_perfil = parametros.get("usuario", [""])[0]
-        conteudo = renderizar(caminho, usuario_perfil=usuario_perfil)
-        if conteudo is None:
-            self.responder(b"Pagina nao encontrada.", status=404)
-            return
-        self.responder(conteudo)
+        status, tipo, conteudo = processar_get(self.path, urlsplit(self.path).query)
+        cabecalhos = (
+            {"Content-Disposition": 'attachment; filename="rede.json"'}
+            if urlsplit(self.path).path == "/exportar"
+            else None
+        )
+        self.responder(conteudo, tipo, status, cabecalhos)
 
     def do_POST(self):
-        caminho = urlsplit(self.path).path
-        if caminho not in (
-            "/html/consultas.html",
-            "/html/analise.html",
-            "/html/falhas.html",
-            "/html/dados.html",
-        ):
-            self.responder(b"Pagina nao encontrada.", status=404)
-            return
-
         tamanho = int(self.headers.get("Content-Length", "0"))
         corpo = self.rfile.read(tamanho)
         tipo = self.headers.get("Content-Type", "")
@@ -608,107 +786,60 @@ class ServidorRede(BaseHTTPRequestHandler):
                     codificacao = parte.get_content_charset() or "utf-8"
                     formulario.setdefault(nome, []).append(conteudo.decode(codificacao))
         else:
-            formulario = parse_qs(corpo.decode("utf-8"))
-        valor = lambda chave, padrao="": formulario.get(chave, [padrao])[0]
-        origem = valor("origem", next(iter(grafo.usuarios), ""))
-        destino = valor("destino", list(grafo.usuarios)[-1])
-        resultado = ""
-        caminho_destacado = None
-
-        if caminho == "/html/analise.html":
-            conteudo = renderizar(
-                caminho,
-                origem,
-                destino,
-                criterio_analise=valor("criterio", "saltos"),
-                acao_analise=valor("acao"),
-            )
-            self.responder(conteudo)
-            return
-
-        if caminho == "/html/dados.html":
-            acao = valor("acao")
-            if acao == "importar":
-                status_importacao = importar_arquivo(arquivos.get("arquivo"))
-                self.responder(renderizar(caminho, status_importacao=status_importacao))
-                return
-            if acao == "padrao":
-                rede_padrao = carregar_grafo()
-                grafo.usuarios.clear()
-                grafo.usuarios.update(rede_padrao.usuarios)
-                grafo.adj.clear()
-                grafo.adj.update(rede_padrao.adj)
-                resultado = '<p class="msg-ok">Rede de exemplo restaurada.</p>'
-                self.responder(renderizar(caminho, status_importacao=resultado))
-                return
-            self.responder(b"Acao invalida.", status=400)
-            return
-
-        if valor("acao") == "rota" or valor("acao") == "recalcular":
-            if origem not in grafo.usuarios or destino not in grafo.usuarios:
-                resultado = '<p class="msg-erro">Selecione usuários existentes na rede.</p>'
-            elif origem == destino:
-                resultado = '<p class="msg-erro">Escolha origem e destino diferentes.</p>'
-            else:
-                rota, custo = grafo.dijkstra(origem, destino)
-                if rota:
-                    caminho_destacado = rota
-                    rota_formatada = " → ".join(html.escape(nome) for nome in rota)
-                    resultado = (
-                        f'<p class="msg-ok"><strong>Rota encontrada:</strong> {rota_formatada}</p>'
-                        f"<p><strong>Distância social:</strong> {custo:.2f}</p>"
-                    )
-                else:
-                    resultado = '<p class="msg-erro">Não há rota disponível entre esses usuários.</p>'
-        elif valor("acao") == "bloquear":
-            conexoes = [
-                (uid, aresta["destino"])
-                for uid, arestas in grafo.adj.items()
-                for aresta in arestas
-                if aresta["ativa"]
-            ]
-            try:
-                indice = int(valor("conexao", "-1"))
-                if indice < 0:
-                    raise IndexError
-                corte_u, corte_v = conexoes[indice]
-            except (ValueError, IndexError):
-                resultado = '<p class="msg-erro">Selecione uma conexão ativa.</p>'
-            else:
-                grafo.desativar_conexao(corte_u, corte_v)
-                rota, custo = grafo.dijkstra(origem, destino)
-                mensagem = f"Conexão {html.escape(corte_u)} → {html.escape(corte_v)} desativada."
-                if rota:
-                    caminho_destacado = rota
-                    rota_formatada = " → ".join(html.escape(nome) for nome in rota)
-                    resultado = (
-                        f'<p class="msg-ok">{mensagem}</p>'
-                        f"<p><strong>Rota alternativa:</strong> {rota_formatada}</p>"
-                        f"<p><strong>Distância social:</strong> {custo:.2f}</p>"
-                    )
-                else:
-                    resultado = f'<p class="msg-erro">{mensagem} Não há rota alternativa.</p>'
-        elif valor("acao") == "restaurar":
-            for arestas in grafo.adj.values():
-                for aresta in arestas:
-                    aresta["ativa"] = True
-            resultado = '<p class="msg-ok">Todas as conexões foram restauradas.</p>'
-        else:
-            self.responder(b"Acao invalida.", status=400)
-            return
-
-        self.responder(
-            renderizar(
-                caminho,
-                origem,
-                destino,
-                resultado,
-                caminho_destacado=caminho_destacado,
-            )
-        )
+            formulario = {
+                chave: valores
+                for chave, valores in parse_qs(corpo.decode("utf-8")).items()
+            }
+        status, tipo, conteudo = processar_post(urlsplit(self.path).path, formulario, arquivos)
+        self.responder(conteudo, tipo, status)
 
     def log_message(self, formato, *argumentos):
         print(f"{self.address_string()} - {formato % argumentos}")
+
+
+app = Flask(__name__)
+app.config["MAX_CONTENT_LENGTH"] = 4 * 1024 * 1024
+
+
+@app.route("/", defaults={"caminho": ""}, methods=["GET", "POST"])
+@app.route("/<path:caminho>", methods=["GET", "POST"])
+def atender_requisicao(caminho):
+    global grafo
+
+    caminho = "/" + caminho
+    try:
+        grafo = carregar_grafo_persistido() if usar_blob() else grafo or carregar_grafo()
+        if request.method == "GET":
+            status, tipo, conteudo = processar_get(caminho, request.query_string.decode("utf-8"))
+        else:
+            formulario = {
+                chave: request.form.getlist(chave)
+                for chave in request.form
+            }
+            arquivos = {
+                chave: (arquivo.filename or "", arquivo.read())
+                for chave, arquivo in request.files.items()
+            }
+            status, tipo, conteudo = processar_post(caminho, formulario, arquivos)
+            acao = formulario.get("acao", [""])[0]
+            if status < 400 and (
+                caminho == "/html/dados.html" and acao in ("importar", "padrao")
+                or caminho == "/html/falhas.html" and acao in ("bloquear", "restaurar")
+            ) and usar_blob():
+                salvar_grafo_persistido()
+        resposta = Response(conteudo, status=status, content_type=tipo)
+        if request.method == "GET" and caminho == "/exportar":
+            resposta.headers["Content-Disposition"] = 'attachment; filename="rede.json"'
+        return resposta
+    except RuntimeError as erro:
+        app.logger.exception("Falha ao carregar ou salvar a rede persistida.")
+        return Response(
+            "<!doctype html><html lang=\"pt-BR\"><meta charset=\"utf-8\">"
+            f"<title>Erro na rede</title><p>{html.escape(str(erro))}</p>"
+            "<p>Confirme que um Vercel Blob privado está conectado a este projeto.</p></html>",
+            status=503,
+            content_type="text/html; charset=utf-8",
+        )
 
 
 if __name__ == "__main__":
