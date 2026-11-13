@@ -25,7 +25,10 @@ Grafo **direcionado e ponderado**: vértices são usuários e arestas `u → v` 
 
 ## Estrutura
 
-- `app.py`: servidor HTTP simples que conecta os formulários HTML ao modelo Python
+- `app.py`: ponto de entrada e servidor HTTP que conecta os formulários ao modelo
+- `apresentacao.py`: renderização das páginas, fragmentos HTML e visualização SVG
+- `analises.py`: matriz de distâncias, componentes conexos, ciclos e busca de caminhos
+- `importacao_dados.py`: validação e importação de arquivos CSV e JSON
 - `rede_relacionamento.py`: classe original `GrafoSocial` e algoritmo Dijkstra
 - `html/` e `index.html`: páginas da interface
 - `css/`: estilos
