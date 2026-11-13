@@ -1,12 +1,15 @@
 <!DOCTYPE html>
+<!-- Consulta de caminhos mínimos entre dois perfis da rede. -->
 <html lang="pt-BR">
 <head>
+  <!-- Metadados do documento e folha de estilos compartilhada. -->
   <meta charset="UTF-8">
   <title>Módulo de Consultas - Caminhos Mínimos</title>
   <link rel="stylesheet" href="../css/style.css">
 </head>
 <body>
 
+  <!-- Navegação lateral comum entre as páginas do sistema. -->
   <div class="sidebar">
     <div>
       <div class="brand">
@@ -24,6 +27,7 @@
     </div>
   </div>
 
+  <!-- Formulário de consulta e apresentação do grafo e do resultado. -->
   <div class="main-content">
     <div class="header">
       <h1>Módulo de Consultas</h1>
@@ -34,6 +38,7 @@
         <h3>Parâmetros da Consulta</h3>
         <p class="muted" style="margin-bottom:15px;">Selecione origem, destino e o critério de busca</p>
 
+        <!-- Envia os perfis escolhidos para o cálculo de rota no servidor. -->
         <form method="post" action="/html/consultas.html">
         <div class="grid-equal">
           <div class="form-group">
@@ -57,6 +62,7 @@
         </form>
       </div>
 
+      <!-- Mostra a rota calculada sobre o grafo e sua descrição textual. -->
       <div class="grid-2">
         <div class="card">
           <h3>Grafo com Rota Destacada</h3>

@@ -1,4 +1,4 @@
-/* Estilos Globais e Layout Base */
+/* Cores reutilizáveis da interface e regras de normalização do documento. */
 :root {
   --bg-dark: #121214;
   --bg-card: #1e1e24;
@@ -27,7 +27,7 @@ body {
   overflow: hidden;
 }
 
-/* Sidebar */
+/* Marca e navegação lateral compartilhadas por todas as páginas. */
 .sidebar {
   width: 250px;
   background-color: var(--bg-sidebar);
@@ -70,6 +70,7 @@ body {
 }
 
 .icon {
+  /* Ícones SVG herdam a cor do texto ao redor e usam traços uniformes. */
   width: 18px;
   height: 18px;
   flex: 0 0 18px;
@@ -81,6 +82,7 @@ body {
 }
 
 .metric-label {
+  /* Alinha ícones e rótulos nas linhas de métricas de perfil. */
   display: flex;
   align-items: center;
   gap: 8px;
@@ -98,7 +100,7 @@ body {
   border-left: 3px solid var(--accent-color);
 }
 
-/* Área Principal de Conteúdo */
+/* Estrutura vertical da área principal, do cabeçalho ao conteúdo rolável. */
 .main-content {
   flex: 1;
   display: flex;
@@ -129,7 +131,7 @@ body {
   gap: 24px;
 }
 
-/* Componentes Comuns */
+/* Cartões e grades que organizam os diferentes painéis da interface. */
 .card {
   background-color: var(--bg-card);
   border: 1px solid var(--border-color);
@@ -167,7 +169,7 @@ body {
   font-weight: 700;
 }
 
-/* Contêiner do Canvas */
+/* Contêineres e rótulos das visualizações de grafos em SVG ou canvas. */
 .canvas-container {
   width: 100%;
   height: 450px;
@@ -206,7 +208,7 @@ canvas {
   stroke-linejoin: round;
 }
 
-/* Formulários, Seleções e Botões */
+/* Controles de formulário, estados de interação e mensagens de orientação. */
 .form-group {
   display: flex;
   flex-direction: column;
@@ -269,6 +271,7 @@ button:disabled {
 }
 
 .row {
+  /* Agrupa controles lado a lado e permite quebra em telas mais estreitas. */
   display: flex;
   gap: 12px;
   align-items: center;
@@ -282,6 +285,7 @@ button:disabled {
 }
 
 .list {
+  /* Layout comum para listas de conexões, rankings e resultados de análise. */
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -327,6 +331,7 @@ button:disabled {
 .msg-erro { color: var(--danger-color); }
 
 .status-list {
+  /* Checklist com estilos de estado aplicáveis aos seus itens. */
   list-style: none;
   display: flex;
   flex-direction: column;
@@ -351,6 +356,7 @@ button:disabled {
 .status-list li small { margin-left: auto; color: var(--text-muted); text-align: right; }
 
 .dropzone {
+  /* Aparência da área de seleção/arraste de arquivos e seu estado ativo. */
   border: 2px dashed var(--border-color);
   padding: 40px;
   text-align: center;
@@ -374,11 +380,13 @@ pre.exemplo {
 }
 
 .scroll-y {
+  /* Limita listas extensas mantendo seu conteúdo acessível por rolagem. */
   max-height: 260px;
   overflow-y: auto;
 }
 
 .matriz {
+  /* Permite consultar matrizes largas sem exceder a largura do cartão. */
   overflow-x: auto;
 }
 
@@ -401,7 +409,7 @@ pre.exemplo {
   font-weight: 400;
 }
 
-/* Tabelas */
+/* Tabelas convencionais e cabeçalhos usados nos resultados tabulares. */
 table {
   width: 100%;
   border-collapse: collapse;

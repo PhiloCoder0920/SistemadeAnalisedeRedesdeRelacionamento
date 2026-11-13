@@ -1,3 +1,5 @@
+# Estruturas e operações de grafos direcionados para relações entre usuários.
+
 import json
 import heapq
 import sys
@@ -9,22 +11,27 @@ if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
     except Exception:
         pass
 
+# Representa um digrafo ponderado de usuários e conexões direcionadas.
 class GrafoSocial:
-    """Modelo: Digrafo Ponderado com o Algoritmo de Dijkstra."""
+
+    # Inicializa os mapas de usuários e as listas de arestas de cada um.
     def __init__(self):
         self.usuarios = {}  # id -> nome
         self.adj = {}       # id -> lista de arestas {'destino', 'peso', 'ativa'}
 
+    # Adiciona ou atualiza um usuário e garante sua lista de adjacências.
     def adicionar_usuario(self, uid, nome):
         self.usuarios[uid] = nome
         self.adj.setdefault(uid, [])
 
+    # Adiciona a aresta direcionada u → v com custo inverso à afinidade.
     def adicionar_conexao(self, u, v, afinidade):
         # Aresta direcionada u -> v.
         # Peso da aresta = Distância Social (1 / afinidade). Menor peso = maior afinidade.
         peso = round(1.0 / afinidade, 2) if afinidade > 0 else float("inf")
         self.adj[u].append({"destino": v, "peso": peso, "ativa": True})
 
+    # Constrói um grafo a partir de um JSON com usuários e conexões.
     @classmethod
     def carregar_json(cls, caminho):
         grafo = cls()
@@ -37,6 +44,7 @@ class GrafoSocial:
         return grafo
 
     # ALGORITMO EXCLUSIVO: Dijkstra para Caminho Ótimo
+    # Retorna o caminho de menor custo e seu custo, ou ausência de rota.
     def dijkstra(self, origem, destino):
         heap = [(0.0, origem, [origem])]
         distancias = {origem: 0.0}
@@ -63,6 +71,7 @@ class GrafoSocial:
         return None, float("inf")
 
     # Simulação de Falhas e Recálculo Automático com Dijkstra
+    # Desativa a primeira aresta ativa u → v e informa se encontrou uma.
     def desativar_conexao(self, u, v):
         for aresta in self.adj.get(u, []):
             if aresta["destino"] == v and aresta["ativa"]:
@@ -70,6 +79,7 @@ class GrafoSocial:
                 return True
         return False
 
+    # Desativa uma aresta, recalcula uma rota e imprime o resultado da falha.
     def simular_falha(self, origem, destino, corte_u, corte_v):
         print(f"\n[SIMULACAO DE FALHA] Desativando vinculo: {self.usuarios[corte_u]} -> {self.usuarios[corte_v]}")
         self.desativar_conexao(corte_u, corte_v)

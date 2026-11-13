@@ -1,12 +1,15 @@
 <!DOCTYPE html>
+<!-- Importação, validação, exportação e inspeção dos dados da rede. -->
 <html lang="pt-BR">
 <head>
+  <!-- Metadados do documento e folha de estilos compartilhada. -->
   <meta charset="UTF-8">
   <title>Estruturação e Leitura de Dados</title>
   <link rel="stylesheet" href="../css/style.css">
 </head>
 <body>
 
+  <!-- Navegação lateral comum entre as páginas do sistema. -->
   <div class="sidebar">
     <div>
       <div class="brand">
@@ -24,13 +27,16 @@
     </div>
   </div>
 
+  <!-- Operações de arquivo e apresentação dos dados atualmente carregados. -->
   <div class="main-content">
     <div class="header">
       <h1>Estruturação e Leitura de Dados</h1>
       <p>Importação de arquivos e validação da integridade do grafo</p>
     </div>
     <div class="content-body">
+      <!-- Importação e restauração de dados, com orientação sobre os formatos. -->
       <div class="grid-equal">
+        <!-- Inventário textual dos perfis e das conexões carregadas. -->
         <div class="card">
           <h3>Importação de Arquivos</h3>
           <p class="muted" style="margin-bottom:15px;">Formatos suportados: CSV ou JSON</p>
@@ -61,6 +67,7 @@ Bruno,Carla,0.7,80</pre>
           <p class="muted" style="margin-top:10px;">O campo de afinidade também pode se chamar <code>weight</code>, <code>peso</code> ou <code>afinidade</code>. Em CSV separado por ponto e vírgula, números decimais também podem usar vírgula.</p>
         </div>
 
+        <!-- Representação visual do grafo atualmente importado. -->
         <div class="card">
           <h3>Checklist de Validação do Grafo</h3>
           <p class="muted">Status da leitura, estruturação e validação</p>

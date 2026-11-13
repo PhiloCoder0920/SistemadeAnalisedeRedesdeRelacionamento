@@ -1,12 +1,15 @@
 <!DOCTYPE html>
+<!-- Página inicial: resumo das métricas e visualização geral da rede. -->
 <html lang="pt-BR">
 <head>
+  <!-- Metadados do documento e carregamento compartilhado dos estilos. -->
   <meta charset="UTF-8">
   <title>Dashboard Principal - Análise de Redes</title>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
+  <!-- Navegação lateral comum entre as páginas do sistema. -->
   <div class="sidebar">
     <div>
       <div class="brand">
@@ -24,12 +27,14 @@
     </div>
   </div>
 
+  <!-- Área principal com indicadores, grafo completo e ranking de usuários. -->
   <div class="main-content">
     <div class="header">
       <h1>Dashboard Principal</h1>
       <p>Visão macro do grafo de relacionamentos</p>
     </div>
     <div class="content-body">
+      <!-- Indicadores globais preenchidos pelo servidor nos marcadores. -->
       <div class="grid-4">
         <div class="card stat-card">
           <span>Total de Usuários</span>
@@ -49,6 +54,7 @@
         </div>
       </div>
 
+      <!-- Visualização SVG do grafo e classificação por grau de conexão. -->
       <div class="grid-2">
         <div class="card">
           <h3 style="margin-bottom: 5px;">Visualização do Grafo</h3>

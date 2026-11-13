@@ -1,12 +1,15 @@
 <!DOCTYPE html>
+<!-- Simulação de falhas em conexões e recálculo de rotas alternativas. -->
 <html lang="pt-BR">
 <head>
+  <!-- Metadados do documento e folha de estilos compartilhada. -->
   <meta charset="UTF-8">
   <title>Simulação de Falhas - Resiliência da Rede</title>
   <link rel="stylesheet" href="../css/style.css">
 </head>
 <body>
 
+  <!-- Navegação lateral comum entre as páginas do sistema. -->
   <div class="sidebar">
     <div>
       <div class="brand">
@@ -24,6 +27,7 @@
     </div>
   </div>
 
+  <!-- Grafo e resultado atual ao lado das ferramentas de simulação. -->
   <div class="main-content">
     <div class="header">
       <h1>Simulação de Falhas</h1>
@@ -32,6 +36,7 @@
     <div class="content-body">
       <div class="grid-2">
         <div style="display:flex; flex-direction:column; gap:20px;">
+          <!-- Visualiza conexões ativas, desativadas e a rota em destaque. -->
           <div class="card">
             <h3>Grafo da Rede</h3>
             <p class="muted" style="margin-bottom:15px;">Arestas desativadas aparecem tracejadas em vermelho; a rota atual aparece em verde</p>
@@ -40,6 +45,7 @@
             </div>
           </div>
 
+          <!-- Permite desativar uma aresta, restaurar a rede ou recalcular rota. -->
           <div class="card">
             <h3>Rota Atual</h3>
             <div id="resultadoBox" class="muted" style="margin-top:12px;">{{ resultado }}</div>

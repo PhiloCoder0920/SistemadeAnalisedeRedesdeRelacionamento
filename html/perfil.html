@@ -1,12 +1,15 @@
 <!DOCTYPE html>
+<!-- Consulta de métricas e vizinhança direta de um usuário. -->
 <html lang="pt-BR">
 <head>
+  <!-- Metadados do documento e folha de estilos compartilhada. -->
   <meta charset="UTF-8">
   <title>Perfil do Usuário - Inspeção Detalhada</title>
   <link rel="stylesheet" href="../css/style.css">
 </head>
 <body>
 
+  <!-- Navegação lateral comum entre as páginas do sistema. -->
   <div class="sidebar">
     <div>
       <div class="brand">
@@ -24,6 +27,7 @@
     </div>
   </div>
 
+  <!-- Seleção do perfil e apresentação das relações de entrada e saída. -->
   <div class="main-content">
     <div class="header">
       <h1>Perfil do Usuário</h1>
@@ -40,6 +44,7 @@
         </form>
       </div>
 
+      <!-- Métricas do perfil e SVG contendo somente sua vizinhança direta. -->
       <div class="grid-equal" style="grid-template-columns: 1fr 2fr;">
         <div class="card">
           <h3>Métricas do Perfil</h3>
@@ -68,6 +73,7 @@
         </div>
       </div>
 
+      <!-- Listas das conexões que o perfil segue e de seus seguidores. -->
       <div class="grid-equal">
         <div class="card">
           <h3 id="tituloSegue">{{ titulo_segue }}</h3>

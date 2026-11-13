@@ -1,3 +1,5 @@
+# Servidor HTTP e renderização da interface de análise de redes sociais.
+
 import csv
 import html
 import io
@@ -17,6 +19,7 @@ ARQUIVO_REDE = ROOT / "dados" / "exemplo-pdf.json"
 grafo = None
 
 
+# Carrega o arquivo JSON de exemplo e o converte em um grafo social.
 def carregar_grafo():
     with ARQUIVO_REDE.open(encoding="utf-8") as arquivo:
         dados = json.load(arquivo)
@@ -31,6 +34,7 @@ def carregar_grafo():
     return rede
 
 
+# Gera opções HTML para todos os usuários, marcando o usuário selecionado.
 def opcoes_usuarios(selecionado):
     return "".join(
         f'<option value="{html.escape(uid, quote=True)}"'
@@ -39,6 +43,7 @@ def opcoes_usuarios(selecionado):
     )
 
 
+# Gera opções HTML para as conexões atualmente ativas do grafo.
 def opcoes_conexoes():
     conexoes = [
         (uid, aresta["destino"])
@@ -52,6 +57,7 @@ def opcoes_conexoes():
     )
 
 
+# Gera linhas HTML para conexões desativadas ou uma mensagem vazia.
 def conexoes_bloqueadas():
     linhas = [
         f'<div class="list-row msg-erro">{html.escape(origem)} → {html.escape(aresta["destino"])}</div>'
@@ -62,6 +68,7 @@ def conexoes_bloqueadas():
     return "".join(linhas) or '<p class="muted">Nenhuma conexão desativada.</p>'
 
 
+# Renderiza o grafo em SVG, destacando uma rota e filtrando usuários se pedido.
 def desenhar_grafo(caminho_destacado=None, usuarios_visiveis=None):
     usuarios = [
         uid for uid in grafo.usuarios
@@ -124,6 +131,7 @@ def desenhar_grafo(caminho_destacado=None, usuarios_visiveis=None):
     return "".join(partes)
 
 
+# Calcula e renderiza a matriz de menores distâncias por saltos ou custo.
 def matriz_caminhos(criterio):
     usuarios = list(grafo.usuarios)
     distancias = {origem: {destino: math.inf for destino in usuarios} for origem in usuarios}
@@ -165,6 +173,7 @@ def matriz_caminhos(criterio):
     )
 
 
+# Encontra componentes fortemente conexos usando o algoritmo de Tarjan.
 def componentes_fortemente_conexos():
     indice = 0
     indices = {}
@@ -173,6 +182,7 @@ def componentes_fortemente_conexos():
     na_pilha = set()
     componentes = []
 
+    # Visita recursivamente os vizinhos ativos e atualiza os índices de Tarjan.
     def visitar(usuario):
         nonlocal indice
         indices[usuario] = baixos[usuario] = indice
@@ -204,12 +214,14 @@ def componentes_fortemente_conexos():
     return sorted(componentes, key=lambda grupo: grupo[0])
 
 
+# Enumera ciclos simples do grafo até o limite e informa se houve truncamento.
 def listar_ciclos(limite=100):
     usuarios = list(grafo.usuarios)
     ordem = {usuario: indice for indice, usuario in enumerate(usuarios)}
     ciclos = []
     truncado = False
 
+    # Explora ciclos sem repetir vértices e elimina duplicatas por ordenação.
     def buscar(inicio, atual, caminho):
         nonlocal truncado
         for aresta in grafo.adj.get(atual, []):
@@ -233,12 +245,14 @@ def listar_ciclos(limite=100):
     return ciclos, truncado
 
 
+# Busca caminhos simples entre dois usuários e os ordena pelo custo total.
 def buscar_cadeias(origem, destino, limite=100):
     caminhos = []
     ordem_visita = []
     visitados = set()
     truncado = False
 
+    # Percorre conexões ativas em profundidade e registra caminhos até o destino.
     def buscar(atual, caminho, custo):
         nonlocal truncado
         if atual not in visitados:
@@ -263,6 +277,7 @@ def buscar_cadeias(origem, destino, limite=100):
     return caminhos, ordem_visita, truncado
 
 
+# Prepara os valores HTML da página de análises estruturais da rede.
 def renderizar_analise(criterio="saltos", acao="", origem="", destino=""):
     selecionado = criterio if criterio in ("saltos", "custo") else "saltos"
     opcoes = {
@@ -308,6 +323,7 @@ def renderizar_analise(criterio="saltos", acao="", origem="", destino=""):
     return opcoes
 
 
+# Preenche o template solicitado com métricas e dados atuais do grafo.
 def renderizar(
     caminho,
     origem="",
@@ -425,6 +441,7 @@ def renderizar(
     return pagina.encode("utf-8")
 
 
+# Valida o arquivo enviado e encaminha a importação para o leitor apropriado.
 def importar_arquivo(arquivo):
     if not arquivo:
         return '<p class="msg-erro">Selecione um arquivo CSV ou JSON.</p>'
@@ -459,6 +476,7 @@ def importar_arquivo(arquivo):
     return resposta.replace(html.escape(nome + ".csv"), html.escape(nome))
 
 
+# Valida e importa conexões CSV, substituindo o grafo somente se tudo for válido.
 def importar_csv(arquivo):
     global grafo
 
@@ -477,6 +495,7 @@ def importar_csv(arquivo):
     leitor = csv.DictReader(io.StringIO(texto), delimiter=delimitador)
     cabecalhos = {str(campo).strip().lower(): campo for campo in leitor.fieldnames or []}
 
+    # Localiza o cabeçalho CSV correspondente ao primeiro nome alternativo.
     def coluna(*nomes):
         return next((cabecalhos[nome] for nome in nomes if nome in cabecalhos), None)
 
@@ -540,7 +559,10 @@ def importar_csv(arquivo):
     )
 
 
+# Atende requisições HTTP da interface e operações sobre o grafo em memória.
 class ServidorRede(BaseHTTPRequestHandler):
+
+    # Envia a resposta HTTP com tipo de conteúdo, tamanho e status informados.
     def responder(self, conteudo, tipo="text/html; charset=utf-8", status=200):
         self.send_response(status)
         self.send_header("Content-Type", tipo)
@@ -548,6 +570,7 @@ class ServidorRede(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(conteudo)
 
+    # Atende páginas, folha de estilos e exportação JSON em requisições GET.
     def do_GET(self):
         caminho = urlsplit(self.path).path
         if caminho == "/css/style.css":
@@ -577,6 +600,7 @@ class ServidorRede(BaseHTTPRequestHandler):
             return
         self.responder(conteudo)
 
+    # Processa formulários de consulta, análise, falhas e importação de dados.
     def do_POST(self):
         caminho = urlsplit(self.path).path
         if caminho not in (
@@ -707,6 +731,7 @@ class ServidorRede(BaseHTTPRequestHandler):
             )
         )
 
+    # Registra no console cada requisição HTTP tratada pelo servidor.
     def log_message(self, formato, *argumentos):
         print(f"{self.address_string()} - {formato % argumentos}")
 

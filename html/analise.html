@@ -1,12 +1,15 @@
 <!DOCTYPE html>
+<!-- Painel de métricas estruturais e explorações em profundidade da rede. -->
 <html lang="pt-BR">
 <head>
+  <!-- Metadados do documento e folha de estilos compartilhada. -->
   <meta charset="UTF-8">
   <title>Análise Estrutural da Rede</title>
   <link rel="stylesheet" href="../css/style.css">
 </head>
 <body>
 
+  <!-- Navegação lateral comum entre as páginas do sistema. -->
   <div class="sidebar">
     <div>
       <div class="brand">
@@ -24,6 +27,7 @@
     </div>
   </div>
 
+  <!-- Formulário único para selecionar critérios e solicitar análises. -->
   <div class="main-content">
     <div class="header">
       <h1>Análise Estrutural</h1>
@@ -31,6 +35,7 @@
     </div>
     <div class="content-body">
 
+      <!-- Os marcadores são substituídos por dados calculados no servidor. -->
       <form method="post" action="/html/analise.html">
       <div class="card">
         <h3>Floyd-Warshall: Caminhos Mínimos entre Todos os Pares</h3>
@@ -42,7 +47,9 @@
         <p class="muted" id="resumoMatriz" style="margin-top:12px;">Considere apenas conexões ativas.</p>
       </div>
 
+      <!-- Resultados de conectividade mútua e ciclos encontrados por DFS. -->
       <div class="grid-equal">
+        <!-- Busca caminhos simples ou exibe a ordem de visita da busca DFS. -->
         <div class="card">
           <h3>Componentes Fortemente Conexos</h3>
           <p class="muted">Grupos em que todos alcançam todos (comunidades recíprocas)</p>
