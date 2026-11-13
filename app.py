@@ -711,7 +711,10 @@ class ServidorRede(BaseHTTPRequestHandler):
         print(f"{self.address_string()} - {formato % argumentos}")
 
 
+import os
+
 if __name__ == "__main__":
     grafo = carregar_grafo()
-    print("Acesse http://127.0.0.1:5500")
-    HTTPServer(("127.0.0.1", 5500), ServidorRede).serve_forever()
+    porta = int(os.environ.get("PORT", 5500))
+    print(f"Servidor rodando na porta {porta}")
+    HTTPServer(("0.0.0.0", porta), ServidorRede).serve_forever()
