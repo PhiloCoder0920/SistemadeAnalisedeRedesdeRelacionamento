@@ -13,7 +13,7 @@ Abra a aplicação localmente em [http://127.0.0.1:5500](http://127.0.0.1:5500/)
 - Eric Joshua Revollo - RA: 1681432612008
 - Pedro Henrique Lopes Vilela Coelho - RA: 1681432612032
 - Tiago Bondezan Bazani - RA: 1681432612036
-- Yuri Shinnishi de Queiroz Rossi - RA: 16814326120xx
+- Yuri Shinnishi de Queiroz Rossi - RA: 1681432612038
 
 ## Modelo
 
