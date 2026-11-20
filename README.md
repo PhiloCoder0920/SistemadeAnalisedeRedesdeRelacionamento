@@ -6,11 +6,34 @@ Projeto prático de Teoria dos Grafos (Tema 3). Para usar a interface HTML sem J
 python app.py
 ```
 
-Abra <http://127.0.0.1:5500>. O modelo existente está em `rede_relacionamento.py`; a interface usa `dados/exemplo-pdf.json`.
+Abra a aplicação localmente em [http://127.0.0.1:5500](http://127.0.0.1:5500/) ou acesse a versão hospedada no Render em [https://sistemadeanalisederedesderelacionamento.onrender.com/](https://sistemadeanalisederedesderelacionamento.onrender.com/). O modelo existente está em `rede_relacionamento.py`; a interface usa `dados/exemplo-pdf.json`.
+
+## Integrantes
+
+- Eric Joshua Revollo - RA: 1681432612008
+- Pedro Henrique Lopes Vilela Coelho - RA: 1681432612032
+- Tiago Bondezan Bazani - RA: 1681432612036
+- Yuri Shinnishi de Queiroz Rossi - RA: 16814326120xx
 
 ## Modelo
 
 Grafo **direcionado e ponderado**: vértices são usuários e arestas `u → v` são relações assimétricas ("u segue v"). Cada aresta tem `afinidade` (maior = mais próximo) e `interacoes`. Nos algoritmos de menor caminho o custo da aresta é `1 / afinidade`.
+
+## Requisitos e Instalação
+
+- **Versão do Python:** Python 3.10 ou superior.
+- **Sistemas operacionais testados:** Windows e Linux.
+- **Dependências:** Caso existam pacotes externos listados em `requirements.txt`, instale-os antes de iniciar o servidor:
+
+```powershell
+python -m pip install -r requirements.txt
+```
+
+## Exemplos de Uso
+
+- **Consulta de rota (aba Consultas):** Com a rede padrão `dados/exemplo-pdf.json` carregada, selecione origem `Ana` e destino `Carla` e clique em resolver para calcular o caminho de menor distância social (`1 / afinidade`) passando por `Bruno`.
+- **Simulação de falha (aba Falhas):** Desative uma conexão ativa para observar o bloqueio na interface e o recálculo automático de rota (quando houver caminho alternativo) ou a indicação de ausência de caminho.
+- **Importação de dados (aba Dados):** Importe um CSV com cabeçalho `from,to,afinidade` (ou `origem,destino,peso`); `interacoes` é opcional. O grafo importado aparece nas páginas Início e Dados.
 
 ## Interface
 
@@ -35,3 +58,8 @@ Grafo **direcionado e ponderado**: vértices são usuários e arestas `u → v` 
 - `dados/exemplo-pdf.json`: rede carregada pelo servidor
 
 Na página Dados, importe um CSV com cabeçalho `from,to,afinidade` (ou `origem,destino,peso`); `interacoes` é opcional. O grafo importado aparece nas páginas Início e Dados. A importação e os bloqueios ficam ativos enquanto o servidor estiver executando; ao reiniciá-lo, a rede volta ao exemplo.
+
+## Dados de Teste e Documentação
+
+- **Dados de exemplo e teste:** Pasta `dados/` (incluindo `dados/exemplo-pdf.json` e arquivos de teste utilizados nas validações).
+- **Documentação do projeto:** Caderno Técnico e Documento de Casos de Teste na documentação/pasta de entrega do projeto.
